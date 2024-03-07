@@ -10,7 +10,7 @@ FROM quay.io/fedora-ostree-desktops/kinoite:39
 
 LABEL org.opencontainers.image.title="Fedora Kinoite"
 LABEL org.opencontainers.image.description="Customized image of Fedora Kinoite"
-LABEL org.opencontainers.image.source="https://github.com/travier/fedora-kinoite"
+LABEL org.opencontainers.image.source="https://github.com/heyste/fedora-kinoite"
 LABEL org.opencontainers.image.licenses="MIT"
 
 # Copy bandwhich from builder container
@@ -23,6 +23,7 @@ RUN rpm-ostree install \
         igt-gpu-tools \
         iotop \
         iwd \
+        kitty \
         krb5-workstation \
         libvirt-daemon \
         libvirt-daemon-config-network \
@@ -43,6 +44,43 @@ RUN rpm-ostree install \
     systemctl enable libvirtd.socket \
     && \
     rm -rf /var/lib/unbound/root.key
+
+# Install from chainguard core tools
+COPY --from=cgr.dev/chainguard/dive:latest /usr/bin/dive /usr/bin/dive
+COPY --from=cgr.dev/chainguard/flux:latest /usr/bin/flux /usr/bin/flux
+COPY --from=cgr.dev/chainguard/helm:latest /usr/bin/helm /usr/bin/helm
+COPY --from=cgr.dev/chainguard/ko:latest /usr/bin/ko /usr/bin/ko
+COPY --from=cgr.dev/chainguard/minio-client:latest /usr/bin/mc /usr/bin/mc
+COPY --from=cgr.dev/chainguard/kubectl:latest /usr/bin/kubectl /usr/bin/kubectl
+
+# A helper to set ARCH_TYPE and ARCH_TYPE2
+COPY arch-helper.sh /usr/bin/arch-helper.sh
+
+# Settings for GO
+ENV GOROOT=/usr/bin/go \
+    GO_VERSION=1.22.1 \
+    PATH="$PATH:/usr/bin/go/bin"
+
+# Install GO
+RUN . /usr/bin/arch-helper.sh \
+  && curl -L https://dl.google.com/go/go${GO_VERSION}.linux-${ARCH_TYPE_2}.tar.gz \
+    | tar --directory /usr/bin --extract --ungzip
+
+# Install tilt
+ENV TILT_VERSION=0.33.10
+RUN . /usr/bin/arch-helper.sh \
+  && curl -fsSL \
+    https://github.com/tilt-dev/tilt/releases/download/v${TILT_VERSION}/tilt.${TILT_VERSION}.linux.${ARCH_TYPE_1}.tar.gz \
+    | tar --directory /usr/bin --extract --ungzip tilt
+
+# Install kind
+RUN curl -Lo ./kind "https://github.com/kubernetes-sigs/kind/releases/latest/download/kind-$(uname)-amd64" && \
+    chmod +x ./kind && \
+    mv ./kind /usr/bin/kind
+
+# Install docker-compose
+RUN wget https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -O /tmp/docker-compose && \
+    install -c -m 0755 /tmp/docker-compose /usr/bin
 
 # Copy custom config to /usr & /etc
 COPY usr usr
