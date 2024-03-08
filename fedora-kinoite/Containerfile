@@ -45,13 +45,6 @@ RUN rpm-ostree install \
     && \
     rm -rf /var/lib/unbound/root.key
 
-# Install from chainguard core tools
-COPY --from=cgr.dev/chainguard/dive:latest /usr/bin/dive /usr/bin/dive
-COPY --from=cgr.dev/chainguard/flux:latest /usr/bin/flux /usr/bin/flux
-COPY --from=cgr.dev/chainguard/helm:latest /usr/bin/helm /usr/bin/helm
-COPY --from=cgr.dev/chainguard/ko:latest /usr/bin/ko /usr/bin/ko
-COPY --from=cgr.dev/chainguard/minio-client:latest /usr/bin/mc /usr/bin/mc
-COPY --from=cgr.dev/chainguard/kubectl:latest /usr/bin/kubectl /usr/bin/kubectl
 
 # A helper to set ARCH_TYPE and ARCH_TYPE2
 COPY arch-helper.sh /usr/bin/arch-helper.sh
@@ -81,6 +74,84 @@ RUN curl -Lo ./kind "https://github.com/kubernetes-sigs/kind/releases/latest/dow
 # Install docker-compose
 RUN wget https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -O /tmp/docker-compose && \
     install -c -m 0755 /tmp/docker-compose /usr/bin
+
+# Install GitHub cli
+ENV GH_VERSION=2.45.0
+RUN . /usr/bin/arch-helper.sh \
+  && curl -sSL https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH_TYPE_2}.tar.gz \
+    | tar --directory /tmp --extract --ungzip \
+     --strip-components 1 gh_${GH_VERSION}_linux_${ARCH_TYPE_2}/bin/gh \
+    && mv /tmp/bin/gh /usr/bin/gh \
+    && chmod +x /usr/bin/gh
+
+# install tmate
+ENV TMATE_VERSION=2.4.0
+RUN . /usr/bin/arch-helper.sh \
+  && curl -L \
+    https://github.com/tmate-io/tmate/releases/download/${TMATE_VERSION}/tmate-${TMATE_VERSION}-static-linux-${ARCH_TYPE_3}.tar.xz \
+    | tar --directory /usr/bin --extract --xz \
+  --strip-components 1 tmate-${TMATE_VERSION}-static-linux-${ARCH_TYPE_3}/tmate
+
+# Install upterm
+ENV UPTERM_VERSION=0.13.2
+RUN . /usr/bin/arch-helper.sh \
+  && curl -L https://github.com/owenthereal/upterm/releases/download/v${UPTERM_VERSION}/upterm_linux_${ARCH_TYPE_2}.tar.gz \
+  | tar --directory /usr/bin --extract --ungzip upterm
+
+ENV GOMODCACHE=/tmp/gomodcache \
+    GOCACHE=/tmp/go-build \
+    GOPLS_VERSION=0.15.1 \
+    METALCLI_VERSION=0.22.0
+
+RUn go version \
+  && mkdir -p /tmp/gomodcache \
+  && ls -la /tmp/gomodcache \
+  && mkdir -p /tmp/gocache \
+  && ls -la /tmp/gocache
+
+RUN set -x \
+  && /bin/env GO111MODULE=on GOPATH=/usr/bin/go /usr/bin/go/bin/go install golang.org/x/tools/gopls@v$GOPLS_VERSION \
+  && /bin/env GO111MODULE=on GOPATH=/usr/bin/go /usr/bin/go/bin/go install github.com/equinix/metal-cli/cmd/metal@v$METALCLI_VERSION \
+  && /bin/env GO111MODULE=on GOPATH=/usr/bin/go /usr/bin/go/bin/go install github.com/mikefarah/yq/v4@latest \
+  && /bin/env GO111MODULE=on GOPATH=/usr/bin/go /usr/bin/go/bin/go install github.com/stamblerre/gocode@latest \
+  && /bin/env GO111MODULE=on GOPATH=/usr/bin/go /usr/bin/go/bin/go install github.com/go-delve/delve/cmd/dlv@latest \
+  && /bin/env GO111MODULE=on GOPATH=/usr/bin/go /usr/bin/go/bin/go install github.com/fatih/gomodifytags@latest \
+  && /bin/env GO111MODULE=on GOPATH=/usr/bin/go /usr/bin/go/bin/go install github.com/cweill/gotests/...@latest \
+  && /bin/env GO111MODULE=on GOPATH=/usr/bin/go /usr/bin/go/bin/go install github.com/motemen/gore/cmd/gore@v0.5.2 \
+  && /bin/env GO111MODULE=on GOPATH=/usr/bin/go /usr/bin/go/bin/go install golang.org/x/tools/cmd/guru@latest \
+  && /bin/env GO111MODULE=on GOPATH=/usr/bin/go /usr/bin/go/bin/go install github.com/jessfraz/dockfmt@latest \
+  && /bin/env GO111MODULE=on GOPATH=/usr/bin/go /usr/bin/go/bin/go install gitlab.com/safesurfer/go-http-server@latest \
+  && /bin/env GO111MODULE=on GOPATH=/usr/bin/go /usr/bin/go/bin/go install github.com/google/go-containerregistry/cmd/crane@latest \
+  && /bin/env GO111MODULE=on GOPATH=/usr/bin/go /usr/bin/go/bin/go install github.com/google/go-containerregistry/cmd/gcrane@latest
+
+# Install yank for our tmux+ttyd+osc52 support
+RUN curl -L https://raw.githubusercontent.com/sunaku/home/master/bin/yank \
+  -o /usr/bin/yank && \
+  chmod +x /usr/bin/yank
+
+# Testing user config via skel injection
+RUN cat <<EOF > /etc/skel/.tmate.conf
+set-option -g set-clipboard on
+set-option -g mouse on
+set-option -g history-limit 50000
+EOF
+
+# Update PATH to locate go binary
+RUN echo 'export PATH=$PATH:/usr/bin/go/bin' >> /etc/skel/.bashrc \
+  && echo 'export KIND_EXPERIMENTAL_PROVIDER=podman' >> /etc/skel/.bashrc
+
+# Install various tools via chainguard
+COPY --from=cgr.dev/chainguard/dive:latest /usr/bin/dive /usr/bin/dive
+COPY --from=cgr.dev/chainguard/flux:latest /usr/bin/flux /usr/bin/flux
+COPY --from=cgr.dev/chainguard/helm:latest /usr/bin/helm /usr/bin/helm
+COPY --from=cgr.dev/chainguard/ko:latest /usr/bin/ko /usr/bin/ko
+COPY --from=cgr.dev/chainguard/minio-client:latest /usr/bin/mc /usr/bin/mc
+COPY --from=cgr.dev/chainguard/kubectl:latest /usr/bin/kubectl /usr/bin/kubectl
+
+# Setup various bash completions
+RUN helm completion bash > /etc/bash_completion.d/helm
+RUN flux completion bash > /etc/bash_completion.d/flux
+RUN kubectl completion bash > /etc/bash_completion.d/kubectl
 
 # Copy custom config to /usr & /etc
 COPY usr usr
