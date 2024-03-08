@@ -40,13 +40,12 @@ RUN rpm-ostree install \
 COPY arch-helper.sh /usr/bin/arch-helper.sh
 
 # Install Java
-RUN . /usr/bin/arch-helper.sh \
-  && curl -L https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz \
+RUN curl -L https://download.oracle.com/java/17/latest/jdk-17_linux-x64_bin.tar.gz \
     | tar --directory /tmp --extract --ungzip \
-  && mv /tmp/jdk-21.0.2 /usr/bin/jdk-21
+  && mv /tmp/jdk-17.0.10 /usr/bin/jdk-17
 
 # Update PATH include java binary
-RUN echo 'export PATH=$PATH:/usr/bin/jdk-21/bin' >> /etc/skel/.bashrc
+RUN echo 'export PATH=$PATH:/usr/bin/jdk-17/bin' >> /etc/skel/.bashrc
 
 # Copy custom config to /usr & /etc
 COPY usr usr
