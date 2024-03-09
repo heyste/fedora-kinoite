@@ -44,6 +44,20 @@ RUN curl -L https://download.oracle.com/java/17/latest/jdk-17_linux-x64_bin.tar.
     | tar --directory /tmp --extract --ungzip \
   && mv /tmp/jdk-17.0.10 /usr/bin/jdk-17
 
+# Source forge files
+RUN mkdir -p /usr/minecraft/forge \
+  && cd /usr/minecraft \
+  && wget "https://maven.minecraftforge.net/net/minecraftforge/forge/1.19-41.1.0/forge-1.19-41.1.0-mdk.zip" -O forge.zip \
+  && unzip forge.zip -d forge
+
+# Build minecraft forge
+RUN export PATH=$PATH:/usr/bin/jdk-17/bin \
+  && java -version \
+  && mkdir /usr/gradle_home \
+  && export GRADLE_USER_HOME=/usr/gradle_home \
+  && cd /usr/minecraft/forge \
+  && ./gradlew genEclipseRuns
+
 # Update PATH include java binary
 RUN echo 'export PATH=$PATH:/usr/bin/jdk-17/bin' >> /etc/skel/.bashrc
 
