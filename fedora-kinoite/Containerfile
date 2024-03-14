@@ -27,6 +27,7 @@ RUN rpm-ostree install \
         netcat \
         qemu-kvm \
         sysprof \
+        the_silver_searcher \
         vim \
         wireguard-tools \
         zsh \
@@ -60,6 +61,9 @@ RUN export PATH=$PATH:/usr/bin/jdk-17/bin \
 
 # Update PATH include java binary
 RUN echo 'export PATH=$PATH:/usr/bin/jdk-17/bin' >> /etc/skel/.bashrc
+
+# A helper to sync files/flatpaks
+COPY sync-user.sh /usr/bin/sync-user.sh
 
 # Copy custom config to /usr & /etc
 COPY usr usr
