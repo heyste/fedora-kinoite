@@ -6,10 +6,10 @@
     ],
     "transports": {
         "docker": {
-            "quay.io/travier/fedora-kinoite": [
+            "docker.io/heyste/kinoite": [
                 {
                     "type": "sigstoreSigned",
-                    "keyPath": "/etc/pki/containers/quay.io-travier-fedora-kinoite.pub",
+                    "keyPath": "/etc/pki/containers/docker.io-heyste-kinoite.pub",
                     "signedIdentity": {
                         "type": "matchRepository"
                     }
