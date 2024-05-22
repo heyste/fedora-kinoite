@@ -4,11 +4,16 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-TIMESTAMP=$(date +'%Y%m%d-%H%M')
+echo "REGISTRY: ${REGISTRY}"
+IMAGE_NAME=${IMAGE_NAME:-kinoite}
+echo "IMAGE_NAME: ${IMAGE_NAME}"
+IMAGE_TAG=$(date +'%Y%m%d-%H%M')
+echo "IMAGE_TAG: ${IMAGE_TAG}"
+
 cd fedora-kinoite
-podman build -t registry.msi.heyste.nz/kinoite:$TIMESTAMP -f Containerfile .
-podman push registry.msi.heyste.nz/kinoite:$TIMESTAMP
-podman images | grep $TIMESTAMP
+podman build -t ${REGISTRY}/${IMAGE_NAME}:$IMAGE_TAG -f Containerfile .
+podman push ${REGISTRY}/${IMAGE_NAME}:$IMAGE_TAG
+podman images | grep $IMAGE_TAG
 cd -
 
 ISO_TMPDIR=$(mktemp -d /tmp/iso-$TIMESTAMP-XXXX)
@@ -22,9 +27,9 @@ sudo podman run --rm --privileged \
                 --volume .:/github/workspace/build \
 		docker.io/heyste/build-container-installer:latest \
 		VERSION=39  \
-		IMAGE_REPO=registry.msi.heyste.nz \
-		IMAGE_NAME=kinoite \
-		IMAGE_TAG=$TIMESTAMP \
+		IMAGE_REPO=${REGISTRY} \
+		IMAGE_NAME=${IMAGE_NAME} \
+		IMAGE_TAG=${IMAGE_TAG} \
 		VARIANT=Server \
 		FLATPAK_REMOTE_REFS="$FLATPAK_ECLIPSE $FLATPAK_SONIC_PI" \
 		FLATPAK_REMOTE_URL="https://flathub.org/repo/flathub.flatpakrepo"
