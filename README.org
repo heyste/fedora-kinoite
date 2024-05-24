@@ -17,7 +17,7 @@ Ubuntu [[https://releases.ubuntu.com/noble/][noble]] has a suitable version, els
 *** Install multipass
 
 #+begin_src tmux :session iiedu:vm :results none
-sudo apt install -y multipass
+sudo snap install multipass
 #+end_src
 
 *** Launch VM
